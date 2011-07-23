@@ -1,0 +1,248 @@
+#!/usr/bin/env python
+import sys
+import os
+import subprocess
+import urllib
+import zipfile
+import shutil
+from tempfile import mkstemp
+
+BOILERPLATE_URL = 'http://github.com/paulirish/html5-boilerplate/zipball/v1.0stripped'
+BOILERPLATE_ZIP = 'html5boilerplate.zip'
+BOILERPLATE_DIR = 'html5boilerplate'
+BOILERPLATE_CONFIG = 'html5boilerplate/build/config/project.properties'
+
+
+
+def startproject(argv=[]):
+    if len(argv) < 2:
+        print 'You must specify a project name, i.e. \'./startprject.py project\''
+        return
+    proj_name = argv[1]
+    argv.insert(1,'startproject')
+    
+    print 'Fetching Python dependencies...'
+    retcode = subprocess.call(['pip', 'install', '-r', 'requirements.txt'])
+    if retcode > 0:
+        print 'Pip failed'
+        return
+        
+    if not os.path.exists(proj_name):
+        print 'Starting project (django-admin.py startproject %s)...' % proj_name
+        from django.core import management
+        management.execute_from_command_line(argv)
+        os.mkdir(os.path.join(proj_name, 'static'))
+        os.mkdir(os.path.join(proj_name, 'static_publish'))
+        os.mkdir(os.path.join(proj_name, 'templates'))
+        os.mkdir(os.path.join(proj_name, 'templates_publish'))
+
+        get_boilerplate()
+        setup_boilerplate(proj_name)
+            
+        setup_settings(proj_name)
+        setup_urls(proj_name)
+        setup_views(proj_name)
+        setup_templates(proj_name)
+        
+        print '\n\nProject setup complete!!!\n'
+        print 'Now run developemnt server with \'python project/manage.py runserver\''
+        print 'Build optimised static and template files with \'./buildproject.py\''
+        
+    else:
+        print 'Directory or file \'%s\' already exists, delete it first if you want to start again' % proj_name
+
+
+
+def get_boilerplate():
+    if not os.path.exists(BOILERPLATE_ZIP):
+        print 'Downloading HTML5 Boilerplate (%s)...' % BOILERPLATE_ZIP
+        urllib.urlretrieve(BOILERPLATE_URL, BOILERPLATE_ZIP)
+    else:
+        print 'Already have Boilerplate zip file (%s)' % BOILERPLATE_ZIP
+
+
+def setup_boilerplate(proj_name):
+    if os.path.exists(BOILERPLATE_DIR):
+        shutil.rmtree(BOILERPLATE_DIR)
+        
+    print 'Extracting Boilerplate zip file (%s)...' % BOILERPLATE_DIR
+    myzip = zipfile.ZipFile(BOILERPLATE_ZIP, 'r')
+    extract_dir = os.path.split(myzip.namelist()[0])[0]
+    myzip.extractall('.')
+    os.rename(extract_dir, BOILERPLATE_DIR)
+
+    print 'Moving HTML, CSS, JS and images into Django project...'
+    for dirname in ['js', 'css', 'img']:
+        shutil.move(os.path.join(BOILERPLATE_DIR, dirname), os.path.join(proj_name, 'static'))
+        # Remove .gitignore files?
+        os.mkdir(os.path.join(proj_name, 'static', dirname, 'publish'))
+
+    for filename in os.listdir(BOILERPLATE_DIR):
+        if filename.endswith('.png') or filename.endswith('.ico'):
+            shutil.move(os.path.join(BOILERPLATE_DIR, filename), os.path.join(proj_name, 'static', 'img'))
+        elif filename.endswith('.html') or filename.endswith('.xml') or filename.endswith('.txt'):
+            shutil.move(os.path.join(BOILERPLATE_DIR, filename), os.path.join(proj_name, 'templates'))
+    os.mkdir(os.path.join(proj_name, 'templates', 'publish'))
+
+    setup_ant(proj_name)
+    
+
+def setup_ant(proj_name):
+    print 'Setting up Ant build config (%s)...' % BOILERPLATE_CONFIG
+    
+    os.symlink(os.path.join('..', proj_name), os.path.join(BOILERPLATE_DIR, 'project'))
+    new_filename = 'project.properties.tmp'
+    new_file = open(new_filename,'w')
+    old_file = open(BOILERPLATE_CONFIG)
+    for line in old_file:
+        for (setting, dst) in [
+                ('js.libs', '${dir.js}/libs'),
+                ('js.mylibs', '${dir.js}/mylibs'),
+                ('js','project/static_tmp/js'),
+                ('css','project/static_tmp/css'),
+                ('images','project/static_tmp/img')]:
+            pattern = '# dir.%s' % setting
+            subst = 'dir.%s = %s' % (setting, dst)
+            line = line.replace(pattern, subst)
+        pattern = 'file.pages        ='
+        subst = 'file.pages = %s/templates/index.html' % proj_name
+        line = line.replace(pattern, subst)
+        new_file.write(line)
+    new_file.close()
+    old_file.close()
+    os.remove(BOILERPLATE_CONFIG)
+    os.rename(new_filename, BOILERPLATE_CONFIG)
+
+
+def setup_settings(proj_name):
+    print 'Modifying settings.py'
+    
+    file_path = os.path.join(proj_name, 'settings.py')
+    fh, abs_path = mkstemp()
+    new_file = open(abs_path,'w')
+    old_file = open(file_path)
+    
+    added_top = False
+    started_staticfiles_dirs = False
+    finished_staticfiles_dirs = False
+    started_template_dirs = False
+    finished_template_dirs = False
+    for i, line in enumerate(old_file):
+        if not line.strip() and not added_top:
+            new_file.write(line)
+            new_file.write('import os\n')
+            new_file.write('PROJECT_DIR = os.path.dirname(__file__)\n\n')
+            added_top = True
+        elif line.startswith('STATIC_ROOT = '):
+            new_file.write('STATIC_ROOT = os.path.abspath(os.path.join(PROJECT_DIR, \'static_publish\'))\n')
+        elif line.startswith('STATICFILES_DIRS = ('):
+            new_file.write(line)
+            started_staticfiles_dirs = True
+        elif started_staticfiles_dirs and not finished_staticfiles_dirs:
+            if line.startswith(')'):
+                new_file.write('    os.path.abspath(os.path.join(PROJECT_DIR, \'static\')),\n')
+                new_file.write(line)
+                finished_staticfiles_dirs = True
+        elif line.startswith('TEMPLATE_DIRS = ('):
+            started_template_dirs = True
+        elif started_template_dirs and not finished_template_dirs:
+            if line.startswith(')'):
+                new_file.write('''if DEBUG:
+    TEMPLATE_DIRS = (
+        os.path.abspath(os.path.join(PROJECT_DIR, 'templates')),
+    )
+else:
+    TEMPLATE_DIRS = (
+        os.path.abspath(os.path.join(PROJECT_DIR, 'templates_publish')),
+    )\n
+    ''')
+                finished_template_dirs = True
+        else:
+            new_file.write(line)
+    new_file.close()
+    os.close(fh)
+    old_file.close()
+    os.remove(file_path)
+    shutil.move(abs_path, file_path)
+
+
+def setup_urls(proj_name):
+    print 'Modifying urls.py'
+    
+    file_path = os.path.join(proj_name, 'urls.py')
+    fh, abs_path = mkstemp()
+    new_file = open(abs_path,'w')
+    old_file = open(file_path)
+    
+    added_top = False
+    started_urlpatterns = False
+    finished_urlpatterns = False
+    for i, line in enumerate(old_file):
+        if not line.strip() and not added_top:
+            new_file.write('from views import home\n\n')
+            added_top = True
+        elif line.startswith('urlpatterns ='):
+            new_file.write(line)
+            started_urlpatterns = True
+        elif started_urlpatterns and not finished_urlpatterns:
+            if line.startswith(')'):
+                new_file.write('    \n    url(r\'^$\', \'project.views.home\', name=\'home\'),\n')
+                new_file.write(line)
+                finished_staticfiles_dirs = True
+            else:
+                new_file.write(line)
+        else:
+            new_file.write(line)
+    new_file.close()
+    os.close(fh)
+    old_file.close()
+    os.remove(file_path)
+    shutil.move(abs_path, file_path)
+
+
+def setup_views(proj_name):
+    print 'Creating views.py'
+    
+    file_path = os.path.join(proj_name, 'views.py')
+    new_file = open(file_path,'w')
+    
+    content = '''from django.shortcuts import render_to_response
+from django.template import RequestContext
+
+def home(request):
+    context = RequestContext(request, {
+        'foo': 'bar',
+    })
+    return render_to_response('index.html', context)
+    '''
+    
+    new_file.write(content)
+    new_file.close()
+
+
+def setup_templates(proj_name):
+    print 'Modifying templates/index.html'
+    
+    file_path = os.path.join(proj_name, 'templates', 'index.html')
+    fh, abs_path = mkstemp()
+    new_file = open(abs_path,'w')
+    old_file = open(file_path)
+    
+    for i, line in enumerate(old_file):
+        line = line.replace('js/', '{{ STATIC_URL }}js/')
+        line = line.replace('css/', '{{ STATIC_URL }}css/')
+        line = line.replace('img/', '{{ STATIC_URL }}img/')
+        line = line.replace('/favicon.ico', '{{ STATIC_URL }}img/favicon.ico')
+        line = line.replace('/apple-touch-icon.png', '{{ STATIC_URL }}img/apple-touch-icon.png')
+        new_file.write(line)
+        
+    new_file.close()
+    os.close(fh)
+    old_file.close()
+    os.remove(file_path)
+    shutil.move(abs_path, file_path)
+
+
+
+if __name__ == "__main__":
+    startproject(sys.argv)
