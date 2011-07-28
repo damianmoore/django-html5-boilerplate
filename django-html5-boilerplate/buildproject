@@ -1,23 +1,33 @@
 #!/usr/bin/env python
+import sys
 import os
 import subprocess
 import shutil
 from django.core import management
 #from project import settings
 
-BOILERPLATE_DIR = 'html5boilerplate'
 
+def buildproject(argv=[]):
+    if len(argv) < 2:
+        proj_dir = os.path.abspath(os.getcwd())
+        in_proj_dir = True
+    else:
+        proj_dir = os.path.abspath(os.path.join(os.getcwd(), argv[1]))
+        in_proj_dir = False
+    if not os.path.isfile(os.path.join(proj_dir, 'manage.py')):
+        print "Not a valid Django project"
+        return
+    boilerplate_dir = os.path.join(proj_dir, '..', 'html5boilerplate')
 
-def buildproject():
     print 'Removing old \'publish\' directories...'
-    if os.path.exists(os.path.join(BOILERPLATE_DIR, 'project', 'templates_publish')):
-        shutil.rmtree(os.path.join(BOILERPLATE_DIR, 'project', 'templates_publish'))
-        os.mkdir(os.path.join(BOILERPLATE_DIR, 'project', 'templates_publish'))
-    if os.path.exists(os.path.join(BOILERPLATE_DIR, 'project', 'static_publish')):
-        shutil.rmtree(os.path.join(BOILERPLATE_DIR, 'project', 'static_publish'))
-        os.mkdir(os.path.join(BOILERPLATE_DIR, 'project', 'static_publish'))
-    if os.path.exists(os.path.join(BOILERPLATE_DIR, 'project', 'static_tmp')):
-        shutil.rmtree(os.path.join(BOILERPLATE_DIR, 'project', 'static_tmp'))
+    if os.path.exists(os.path.join(proj_dir, 'templates_publish')):
+        shutil.rmtree(os.path.join(proj_dir, 'templates_publish'))
+        os.mkdir(os.path.join(proj_dir, 'templates_publish'))
+    if os.path.exists(os.path.join(proj_dir, 'static_publish')):
+        shutil.rmtree(os.path.join(proj_dir, 'static_publish'))
+        os.mkdir(os.path.join(proj_dir, 'static_publish'))
+    if os.path.exists(os.path.join(proj_dir, 'static_tmp')):
+        shutil.rmtree(os.path.join(proj_dir, 'static_tmp'))
         
     print 'Running collectstatic...'
     #management.setup_environ(settings)
@@ -27,12 +37,15 @@ def buildproject():
     #collectstatic_command = Command()
     #collectstatic_command.handle_noargs(interactive=False)
     
-    subprocess.call(['python', 'project/manage.py', 'collectstatic', '--noinput'])
+    if in_proj_dir:
+        subprocess.call(['python', 'manage.py', 'collectstatic', '--noinput'])
+    else:
+        subprocess.call(['python', '%s/manage.py'%argv[1], 'collectstatic', '--noinput'])
     
-    os.rename(os.path.join(BOILERPLATE_DIR, 'project', 'static_publish'), os.path.join(BOILERPLATE_DIR, 'project', 'static_tmp'))
+    os.rename(os.path.join(proj_dir, 'static_publish'), os.path.join(proj_dir, 'static_tmp'))
         
     cwd = os.getcwd()
-    os.chdir(os.path.join(BOILERPLATE_DIR, 'build'))
+    os.chdir(os.path.join(boilerplate_dir, 'build'))
     print 'Starting Ant build...'
     try:
         subprocess.call(['ant', '-version'])
@@ -47,14 +60,15 @@ def buildproject():
     os.chdir(cwd)
     
     print 'Moving minified templates to Django project (templates_publish)...'
-    os.rename(os.path.join(BOILERPLATE_DIR, 'publish', 'project', 'templates'), os.path.join(BOILERPLATE_DIR, 'project', 'templates_publish'))
+    os.rename(os.path.join(boilerplate_dir, 'publish', argv[1], 'templates'), os.path.join(proj_dir, 'templates_publish'))
     
     print 'Moving CSS, JS and images into Django project...'
-    os.rename(os.path.join(BOILERPLATE_DIR, 'publish', 'project', 'static_tmp'), os.path.join(BOILERPLATE_DIR, 'project', 'static_publish'))
+    os.rename(os.path.join(boilerplate_dir, 'publish', argv[1], 'static_tmp'), os.path.join(proj_dir, 'static_publish'))
     
-    shutil.rmtree(os.path.join(BOILERPLATE_DIR, 'publish'))
-    shutil.rmtree(os.path.join(BOILERPLATE_DIR, 'project', 'static_tmp'))
+    shutil.rmtree(os.path.join(boilerplate_dir, 'publish'))
+    shutil.rmtree(os.path.join(proj_dir, 'static_tmp'))
     
     
 if __name__ == "__main__":
-    buildproject()
+    buildproject(sys.argv)
+

@@ -22,7 +22,7 @@ def startproject(argv=[]):
     argv.insert(1,'startproject')
     
     print 'Fetching Python dependencies...'
-    retcode = subprocess.call(['pip', 'install', '-r', 'requirements.txt'])
+    retcode = subprocess.call(['pip', 'install', 'Django==1.3'])
     if retcode > 0:
         print 'Pip failed'
         return
@@ -90,7 +90,7 @@ def setup_boilerplate(proj_name):
 def setup_ant(proj_name):
     print 'Setting up Ant build config (%s)...' % BOILERPLATE_CONFIG
     
-    os.symlink(os.path.join('..', proj_name), os.path.join(BOILERPLATE_DIR, 'project'))
+    os.symlink(os.path.join('..', proj_name), os.path.join(BOILERPLATE_DIR, proj_name))
     new_filename = 'project.properties.tmp'
     new_file = open(new_filename,'w')
     old_file = open(BOILERPLATE_CONFIG)
@@ -98,9 +98,9 @@ def setup_ant(proj_name):
         for (setting, dst) in [
                 ('js.libs', '${dir.js}/libs'),
                 ('js.mylibs', '${dir.js}/mylibs'),
-                ('js','project/static_tmp/js'),
-                ('css','project/static_tmp/css'),
-                ('images','project/static_tmp/img')]:
+                ('js','%s/static_tmp/js'%proj_name),
+                ('css','%s/static_tmp/css'%proj_name),
+                ('images','%s/static_tmp/img'%proj_name)]:
             pattern = '# dir.%s' % setting
             subst = 'dir.%s = %s' % (setting, dst)
             line = line.replace(pattern, subst)
@@ -186,7 +186,7 @@ def setup_urls(proj_name):
             started_urlpatterns = True
         elif started_urlpatterns and not finished_urlpatterns:
             if line.startswith(')'):
-                new_file.write('    \n    url(r\'^$\', \'project.views.home\', name=\'home\'),\n')
+                new_file.write('    \n    url(r\'^$\', \'%s.views.home\', name=\'home\'),\n' % proj_name)
                 new_file.write(line)
                 finished_staticfiles_dirs = True
             else:
@@ -246,3 +246,4 @@ def setup_templates(proj_name):
 
 if __name__ == "__main__":
     startproject(sys.argv)
+
