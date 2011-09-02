@@ -16,7 +16,7 @@ BOILERPLATE_CONFIG = 'html5boilerplate/build/config/project.properties'
 
 def startproject(argv=[]):
     if len(argv) < 2:
-        print 'You must specify a project name, i.e. \'./startprject.py project\''
+        print 'You must specify a project name, i.e. \'startproject project\''
         return
     proj_name = argv[1]
     argv.insert(1,'startproject')
