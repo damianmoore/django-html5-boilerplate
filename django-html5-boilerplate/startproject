@@ -46,7 +46,7 @@ def startproject(argv=[]):
         
         print '\n\nProject setup complete!!!\n'
         print 'Now run developemnt server with \'python project/manage.py runserver\''
-        print 'Build optimised static and template files with \'./buildproject.py\''
+        print 'Build optimised static and template files with \'buildproject\''
         
     else:
         print 'Directory or file \'%s\' already exists, delete it first if you want to start again' % proj_name
