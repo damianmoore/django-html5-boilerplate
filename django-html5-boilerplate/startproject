@@ -7,7 +7,7 @@ import zipfile
 import shutil
 from tempfile import mkstemp
 
-BOILERPLATE_URL = 'http://github.com/paulirish/html5-boilerplate/zipball/v1.0stripped'
+BOILERPLATE_URL = 'http://github.com/paulirish/html5-boilerplate/zipball/v2.0stripped'
 BOILERPLATE_ZIP = 'html5boilerplate.zip'
 BOILERPLATE_DIR = 'html5boilerplate'
 BOILERPLATE_CONFIG = 'html5boilerplate/build/config/project.properties'
