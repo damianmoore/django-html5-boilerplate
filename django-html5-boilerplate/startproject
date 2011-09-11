@@ -28,7 +28,7 @@ def startproject(argv=[]):
         return
         
     if not os.path.exists(proj_name):
-        print 'Starting project (django-admin.py startproject %s)...' % proj_name
+        print '\n\nStarting project (django-admin.py startproject %s)...' % proj_name
         from django.core import management
         management.execute_from_command_line(argv)
         os.mkdir(os.path.join(proj_name, 'static'))
