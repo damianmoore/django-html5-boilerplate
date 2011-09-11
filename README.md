@@ -6,8 +6,8 @@ that is broken, please let me know. Patches, improvements and other feedback is
 most welcome._
 
 
-This project allows you to start a Django project based on the amazing HTML5
-Boilerplate template and build system. http://html5boilerplate.com/
+This project allows you to easily start a Django project based on the amazing
+HTML5 Boilerplate template and build system (http://html5boilerplate.com/).
 
 When looking for similar projects on the web, I found a few that incorporated
 the template of HTML5 Boilerplate but none that would allow you to make use of
@@ -20,7 +20,7 @@ Boilerplate is about before trying to make too many modifications.
 
 The django-html5-boilerplate project initially only contains two Python scripts
 which are described below. These scripts will be available on your virtualenv's
-path if you install via `python setup.py install`.
+path if you install via `python setup.py install` or `pip install <package>`.
 
 
 - - -
@@ -30,7 +30,7 @@ Dependencies
 
 *   Python 2.x
 *   Java JRE or JDK
-*   Ant
+*   Ant (1.8.2)
 *   Pip
 *   (Django and HTML5 Boilerplate will be downloaded when `startproject` is run)
 
