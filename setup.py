@@ -9,7 +9,7 @@ setup(name = 'django-html5-boilerplate',
     author_email = '',
     url = 'https://github.com/damianmoore/django-html5-boilerplate',
     packages = ['django-html5-boilerplate',],
-    scripts = ['django-html5-boilerplate/startproject', 'django-html5-boilerplate/buildproject',]
+    scripts = ['django-html5-boilerplate/startproject', 'django-html5-boilerplate/buildproject',],
     install_requires = ['django',]
 )
 
