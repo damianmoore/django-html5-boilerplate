@@ -4,7 +4,7 @@ import os
 import subprocess
 import shutil
 from django.core import management
-#from project import settings
+from tempfile import mkstemp
 
 
 def buildproject(argv=[]):
@@ -14,12 +14,13 @@ def buildproject(argv=[]):
     else:
         proj_dir = os.path.abspath(os.path.join(os.getcwd(), argv[1]))
         in_proj_dir = False
+    proj_name = os.path.split(proj_dir)[-1]
     if not os.path.isfile(os.path.join(proj_dir, 'manage.py')):
         print "Not a valid Django project"
         return
     boilerplate_dir = os.path.join(proj_dir, '..', 'html5boilerplate')
 
-    print 'Removing old \'publish\' directories...'
+    print 'Removing old publish directories...'
     if os.path.exists(os.path.join(proj_dir, 'templates_publish')):
         shutil.rmtree(os.path.join(proj_dir, 'templates_publish'))
         os.mkdir(os.path.join(proj_dir, 'templates_publish'))
@@ -40,7 +41,7 @@ def buildproject(argv=[]):
     if in_proj_dir:
         subprocess.call(['python', 'manage.py', 'collectstatic', '--noinput'])
     else:
-        subprocess.call(['python', '%s/manage.py'%argv[1], 'collectstatic', '--noinput'])
+        subprocess.call(['python', '%s/manage.py'%proj_name, 'collectstatic', '--noinput'])
     
     os.rename(os.path.join(proj_dir, 'static_publish'), os.path.join(proj_dir, 'static_tmp'))
         
@@ -60,13 +61,31 @@ def buildproject(argv=[]):
     os.chdir(cwd)
     
     print 'Moving minified templates to Django project (templates_publish)...'
-    os.rename(os.path.join(boilerplate_dir, 'publish', argv[1], 'templates'), os.path.join(proj_dir, 'templates_publish'))
+    os.rename(os.path.join(boilerplate_dir, 'publish', proj_name, 'templates'), os.path.join(proj_dir, 'templates_publish'))
     
     print 'Moving CSS, JS and images into Django project...'
-    os.rename(os.path.join(boilerplate_dir, 'publish', argv[1], 'static_tmp'), os.path.join(proj_dir, 'static_publish'))
+    os.rename(os.path.join(boilerplate_dir, 'publish', proj_name, 'static_tmp'), os.path.join(proj_dir, 'static_publish'))
     
     shutil.rmtree(os.path.join(boilerplate_dir, 'publish'))
     shutil.rmtree(os.path.join(proj_dir, 'static_tmp'))
+    
+    print 'Updating file paths...'
+    for root, dirnames, filenames in os.walk(os.path.join(proj_dir, 'templates_publish')):
+        for filename in filenames:
+            file_path = os.path.join(proj_dir, 'templates_publish', filename)
+            fh, abs_path = mkstemp()
+            new_file = open(abs_path,'w')
+            old_file = open(file_path)
+            for i, line in enumerate(old_file):
+                if '%s/static_tmp/'%proj_name in line:
+                    new_file.write(line.replace('%s/static_tmp/'%proj_name, '{{ STATIC_URL }}'))
+                else:
+                    new_file.write(line)
+            new_file.close()
+            os.close(fh)
+            old_file.close()
+            os.remove(file_path)
+            shutil.move(abs_path, file_path)
     
     
 if __name__ == "__main__":

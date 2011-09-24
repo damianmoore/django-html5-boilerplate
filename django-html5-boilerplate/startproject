@@ -76,7 +76,6 @@ def setup_boilerplate(proj_name):
             shutil.move(os.path.join(BOILERPLATE_DIR, filename), os.path.join(proj_name, 'static', 'img'))
         elif filename.endswith('.html') or filename.endswith('.xml') or filename.endswith('.txt'):
             shutil.move(os.path.join(BOILERPLATE_DIR, filename), os.path.join(proj_name, 'templates'))
-    os.mkdir(os.path.join(proj_name, 'templates', 'publish'))
     
     # Create empty JS file in mylibs so that build script runs straight away
     file = open(os.path.join(proj_name, 'static', 'js', 'mylibs', 'empty.js'), 'w')
