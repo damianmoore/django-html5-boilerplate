@@ -23,20 +23,28 @@ def startproject(argv=[]):
     
     if not os.path.exists(proj_name):
         print '\n\nStarting project (django-admin.py startproject %s)...' % proj_name
+
+        from django import VERSION
         from django.core import management
+
+        # Resolve project path according to Django version:
+        proj_path = proj_name
+        if VERSION[0] >= 1 and VERSION[1] >= 4:
+            proj_path = os.path.join(proj_name, proj_name)
+
         management.execute_from_command_line(argv)
-        os.mkdir(os.path.join(proj_name, 'static'))
-        os.mkdir(os.path.join(proj_name, 'static_publish'))
-        os.mkdir(os.path.join(proj_name, 'templates'))
-        os.mkdir(os.path.join(proj_name, 'templates_publish'))
+        os.mkdir(os.path.join(proj_path, 'static'))
+        os.mkdir(os.path.join(proj_path, 'static_publish'))
+        os.mkdir(os.path.join(proj_path, 'templates'))
+        os.mkdir(os.path.join(proj_path, 'templates_publish'))
 
         get_boilerplate()
-        setup_boilerplate(proj_name)
+        setup_boilerplate(proj_name, proj_path)
             
-        setup_settings(proj_name)
-        setup_urls(proj_name)
-        setup_views(proj_name)
-        setup_templates(proj_name)
+        setup_settings(proj_path)
+        setup_urls(proj_name, proj_path)
+        setup_views(proj_path)
+        setup_templates(proj_path)
         
         print '\n\nProject setup complete!!!\n'
         print 'Now run developemnt server with \'python project/manage.py runserver\''
@@ -55,7 +63,7 @@ def get_boilerplate():
         print 'Already have Boilerplate zip file (%s)' % BOILERPLATE_ZIP
 
 
-def setup_boilerplate(proj_name):
+def setup_boilerplate(proj_name, proj_path):
     if os.path.exists(BOILERPLATE_DIR):
         shutil.rmtree(BOILERPLATE_DIR)
         
@@ -67,28 +75,29 @@ def setup_boilerplate(proj_name):
 
     print 'Moving HTML, CSS, JS and images into Django project...'
     for dirname in ['js', 'css', 'img']:
-        shutil.move(os.path.join(BOILERPLATE_DIR, dirname), os.path.join(proj_name, 'static'))
+        shutil.move(os.path.join(BOILERPLATE_DIR, dirname), os.path.join(proj_path, 'static'))
+
         # Remove .gitignore files?
-        os.mkdir(os.path.join(proj_name, 'static', dirname, 'publish'))
+        os.mkdir(os.path.join(proj_path, 'static', dirname, 'publish'))
 
     for filename in os.listdir(BOILERPLATE_DIR):
         if filename.endswith('.png') or filename.endswith('.ico'):
-            shutil.move(os.path.join(BOILERPLATE_DIR, filename), os.path.join(proj_name, 'static', 'img'))
+            shutil.move(os.path.join(BOILERPLATE_DIR, filename), os.path.join(proj_path, 'static', 'img'))
         elif filename.endswith('.html') or filename.endswith('.xml') or filename.endswith('.txt'):
-            shutil.move(os.path.join(BOILERPLATE_DIR, filename), os.path.join(proj_name, 'templates'))
+            shutil.move(os.path.join(BOILERPLATE_DIR, filename), os.path.join(proj_path, 'templates'))
     
     # Create empty JS file in mylibs so that build script runs straight away
-    file = open(os.path.join(proj_name, 'static', 'js', 'mylibs', 'empty.js'), 'w')
+    file = open(os.path.join(proj_path, 'static', 'js', 'mylibs', 'empty.js'), 'w')
     file.write('')
     file.close()
 
-    setup_ant(proj_name)
+    setup_ant(proj_name, proj_path)
     
 
-def setup_ant(proj_name):
+def setup_ant(proj_name, proj_path):
     print 'Setting up Ant build config (%s)...' % BOILERPLATE_CONFIG
     
-    os.symlink(os.path.join('..', proj_name), os.path.join(BOILERPLATE_DIR, proj_name))
+    os.symlink(os.path.join('..', proj_path), os.path.join(BOILERPLATE_DIR, proj_name))
     new_filename = 'project.properties.tmp'
     new_file = open(new_filename,'w')
     old_file = open(BOILERPLATE_CONFIG)
@@ -112,10 +121,10 @@ def setup_ant(proj_name):
     os.rename(new_filename, BOILERPLATE_CONFIG)
 
 
-def setup_settings(proj_name):
+def setup_settings(proj_path):
     print 'Modifying settings.py'
     
-    file_path = os.path.join(proj_name, 'settings.py')
+    file_path = os.path.join(proj_path, 'settings.py')
     fh, abs_path = mkstemp()
     new_file = open(abs_path,'w')
     old_file = open(file_path)
@@ -164,10 +173,10 @@ else:
     shutil.move(abs_path, file_path)
 
 
-def setup_urls(proj_name):
+def setup_urls(proj_name, proj_path):
     print 'Modifying urls.py'
     
-    file_path = os.path.join(proj_name, 'urls.py')
+    file_path = os.path.join(proj_path, 'urls.py')
     fh, abs_path = mkstemp()
     new_file = open(abs_path,'w')
     old_file = open(file_path)
@@ -198,10 +207,10 @@ def setup_urls(proj_name):
     shutil.move(abs_path, file_path)
 
 
-def setup_views(proj_name):
+def setup_views(proj_path):
     print 'Creating views.py'
     
-    file_path = os.path.join(proj_name, 'views.py')
+    file_path = os.path.join(proj_path, 'views.py')
     new_file = open(file_path,'w')
     
     content = '''from django.shortcuts import render_to_response
@@ -218,10 +227,10 @@ def home(request):
     new_file.close()
 
 
-def setup_templates(proj_name):
+def setup_templates(proj_path):
     print 'Modifying templates/index.html'
     
-    file_path = os.path.join(proj_name, 'templates', 'index.html')
+    file_path = os.path.join(proj_path, 'templates', 'index.html')
     fh, abs_path = mkstemp()
     new_file = open(abs_path,'w')
     old_file = open(file_path)
