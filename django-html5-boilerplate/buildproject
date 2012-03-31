@@ -3,9 +3,12 @@ import sys
 import os
 import subprocess
 import shutil
+from django import VERSION
 from django.core import management
 from tempfile import mkstemp
 
+
+DJANGO_1_4 = True if VERSION[0] >= 1 and VERSION[1] >= 4 else False
 
 def buildproject(argv=[]):
     if len(argv) < 2:
@@ -15,10 +18,17 @@ def buildproject(argv=[]):
         proj_dir = os.path.abspath(os.path.join(os.getcwd(), argv[1]))
         in_proj_dir = False
     proj_name = os.path.split(proj_dir)[-1]
-    if not os.path.isfile(os.path.join(proj_dir, 'manage.py')):
+    manage_py = [proj_dir, 'manage.py']
+    if not os.path.exists(os.path.join(*manage_py)) and DJANGO_1_4:
+        manage_py.insert(1, '..')
+    manage_py = os.path.abspath(os.path.join(*manage_py))
+    if not os.path.isfile(manage_py):
         print "Not a valid Django project"
         return
-    boilerplate_dir = os.path.join(proj_dir, '..', 'html5boilerplate')
+    boilerplate_dir = [proj_dir, '..', 'html5boilerplate']
+    if not os.path.exists(os.path.join(*boilerplate_dir)) and DJANGO_1_4:
+        boilerplate_dir.insert(2, '..')
+    boilerplate_dir = os.path.abspath(os.path.join(*boilerplate_dir))
 
     print 'Removing old publish directories...'
     if os.path.exists(os.path.join(proj_dir, 'templates_publish')):
@@ -38,10 +48,7 @@ def buildproject(argv=[]):
     #collectstatic_command = Command()
     #collectstatic_command.handle_noargs(interactive=False)
     
-    if in_proj_dir:
-        subprocess.call(['python', 'manage.py', 'collectstatic', '--noinput'])
-    else:
-        subprocess.call(['python', '%s/manage.py'%proj_name, 'collectstatic', '--noinput'])
+    subprocess.call(['python', manage_py, 'collectstatic', '--noinput'])
     
     os.rename(os.path.join(proj_dir, 'static_publish'), os.path.join(proj_dir, 'static_tmp'))
         
